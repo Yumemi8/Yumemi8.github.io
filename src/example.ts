@@ -1,8 +1,8 @@
 import Azusa from './azusa';
 
-import testSound from "./static/test.mp3";
+import testSound from "./static/cha.mp3";
 
-import bgImg from "./static/test.jpg";
+import bgImg from "./static/9s.jpg";
 
 function start() {
   console.log('start')
