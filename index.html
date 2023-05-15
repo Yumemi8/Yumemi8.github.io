@@ -1,61 +1,142 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
-  <meta name="description" content="初音未来版本的通过点击/触摸播放声音并出现变化图案的互动内容。">
-  <title>Mikutap</title>
-  <link rel="apple-touch-icon" href="icon.png">
-  <link href="https://fonts.loli.net/css?family=Quicksand:400" rel="stylesheet">
-  <link charset="UTF-8" href="shared/sp/css/common.css" rel="stylesheet">
-  <link charset="utf-8" href="css/mikutap.css" rel="stylesheet">
-  <script charset="utf-8" src="https://cdnjs.loli.net/ajax/libs/jquery/2.2.4/jquery.min.js" type="text/javascript"></script>
-  <script charset="utf-8" src="https://cdnjs.loli.net/ajax/libs/pixi.js/3.0.11/pixi.min.js" type="text/javascript"></script>
-  <script charset="utf-8" src="https://cdnjs.loli.net/ajax/libs/gsap/1.19.1/TweenMax.min.js" type="text/javascript"></script>
-  <script charset="UTF-8" src="shared/js/common-2.min.js" type="text/javascript"></script>
-  <script charset="utf-8" src="js/mikutap.min.js" type="text/javascript"></script>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="scripts/anime.min.js"></script>
+    <script src="scripts/color.js"></script>
 </head>
 
 <body>
-  <div id="view"></div>
-  <div id="scene_top">
-    <h1>Mikutap</h1>
-    <div id="ng">
-      <p class="atten">十分抱歉<br>您的浏览器并不支持本页面需要的特性</p>
+    <div class="input_box">
+        <span class="play_song">select</span>
+        <input type="file" value="加载" id="loadFile" onchange="loadFile(this.files)">
     </div>
-    <div class="ok">
-      <p id="bt_start"><a href="">!开始!</a></p>
-    </div>
-    <p id="bt_about"><a href="">*关于*</a></p>
-    <div class="ok">
-      <p class="attention">※请打开声音并享受。</p>
-    </div>
-     <div class="ok">
-     <p class="tit"><strong>此页面由<a href="https://www.mingritang.com">mrimg</a>转载分享，原网址请点击“关于”了解更多 </strong></p>
-    </div>
-  </div>
-  <div id="scene_loading">
-    <hr size="1" color="#fff"> </div>
-  <div id="scene_main">
-    <div class="set">
-      <p class="attention">点击 &amp; 拖动或者按任意键!</p>
-      <p id="bt_backtrack"><a href="">背景音乐: 开启</a></p>
-    </div>
-  </div>
-  <div id="about_cover"></div>
-  <div id="about">
-    <div id="about_in">
-      <p class="close"><span id="bt_close">×</span></p>
-      <p class="con"> 声音来源 <a href="https://ec.crypton.co.jp/pages/prod/vocaloid/mikuv4x" target="_blank">Hatsune Miku</a> </p>
-      <p class="con"> 作者 <a href="https://aidn.jp" target="_blank">daniwell</a> (<a href="https://twitter.com/daniwell_aidn" target="_blank">twitter</a>) </p>
-      <p class="link"> 灵感来源 <a href="http://patatap.com/" target="_blank">Patatap</a><br>(令人赞叹的网页!)</p>
-    </div>
-  </div>
-  <div id="bt_back">＜返回</div>
-  <div id="bt_fs">□全屏显示</div>
+    <div class="stage"></div>
+    <ul id="fileList">
+       
+
+    </ul>
 </body>
+<script>
+    //文件加载
+    let fileList = [];
+    let loadFile = function (files) {
+        let file = files[0];
+        for (let i = 0; i < fileList.length; i++) {
+            if (file.name == fileList[i].name) {
+                return
+            }
+        }
+        fileList.push({
+            num: fileList.length + 1,
+            name: file.name
+        })
+
+        let liEl = document.createElement('li');
+        liEl.addEventListener('click', function () {
+            play(file, liEl);
+            selected(liEl);
+        })
+
+        let numSpanEl = document.createElement('span');
+        numSpanEl.classList.add('num');
+        numSpanEl.innerHTML = fileList.length;
+        liEl.append(numSpanEl);
+
+        let nameSpanEl = document.createElement('span');
+        nameSpanEl.classList.add('song');
+        nameSpanEl.innerHTML = file.name;
+        liEl.append(nameSpanEl);
+
+        let fileListEl = document.getElementById('fileList');
+        fileListEl.append(liEl)
+
+        let selected = function (selectedEl) {
+            let liChildren = document.getElementById('fileList').children;
+            for (let i = 0; i < liChildren.length; i++) {
+                liChildren.item(i).lastChild.classList.remove('selected');
+            }
+            selectedEl.lastChild.classList.add('selected');
+        }
+    }
+
+    //音乐播放
+    let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let audioBufferSourceNode = null;
+    let analyser = audioCtx.createAnalyser();
+    let play = function (file) {
+        let fr = new FileReader();
+        fr.onload = function (e) {
+            audioCtx.decodeAudioData(e.target.result).then(function (buffer) {
+                if (audioBufferSourceNode != null) {
+                    audioBufferSourceNode.stop();
+                }
+                audioBufferSourceNode = null;
+                audioBufferSourceNode = audioCtx.createBufferSource();
+                audioBufferSourceNode.buffer = buffer;
+                audioBufferSourceNode.connect(audioCtx.destination);
+                audioBufferSourceNode.connect(analyser);
+                audioBufferSourceNode.loop = true;
+                audioBufferSourceNode.start(0);
+            })
+            getMusicData();
+        }
+        fr.readAsArrayBuffer(file);
+    }
+
+    //加载音乐波形分析器
+    let getMusicData = function () {
+        webkitRequestAnimationFrame(getMusicData);
+        const audioInfoArray = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(audioInfoArray);
+        console.log(audioInfoArray);
+        animeDiv(audioInfoArray);
+    }
+
+    //初始化div
+    let initDiv = function (num,r) {
+        const winWidth = document.documentElement.clientWidth;
+        const winHeight = document.documentElement.clientHeight;
+        const avd = 360 / num;
+        const ahd = avd * Math.PI / 180;
+        let stageDivEl = document.querySelector('.stage');
+        for (let i = 0; i < num; i++) {
+            let divEl = document.createElement('div');
+            const color = gradientColor('#16a5a3','#da2864',i,num);
+            divEl.setAttribute('style','background-color:' + color + ';box-shadow:0px 0px 10px' + color);
+            divEl.classList.add('el');
+            stageDivEl.append(divEl);
+            anime({
+                targets:divEl,
+                translateX:[winWidth / 2,winWidth /2 + Math.sin(ahd * i) * r],
+                translateY:[winHeight / 2,winHeight / 2 + Math.cos(ahd * i) * r],
+                rotate:[-(avd * i)],
+                loop:false,
+                duration:1
+            })
+        }
+    }
+    initDiv(60,100);
+
+    //形成动画
+    let animeDiv = function(audioInfoArray){
+        let stageDivEl = document.querySelector('.stage');
+        for(let i = 0;i < stageDivEl.children.length;i++){
+            if(audioInfoArray[i]==0){
+                audioInfoArray[i] = 4;
+            }
+            anime({
+                targets:stageDivEl.children[i],
+                height:[audioInfoArray[i] / 2],
+                duration:1
+            })
+        }
+    }
+</script>
 
 </html>
